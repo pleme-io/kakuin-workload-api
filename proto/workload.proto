@@ -1,0 +1,99 @@
+// SPIFFE Workload API protobuf — vendored from
+// https://github.com/spiffe/spiffe/blob/main/standards/SPIFFE_Workload_API.md
+// (matches the protocol the spire-agent serves on the workload-API
+// socket).
+
+syntax = "proto3";
+
+package SpiffeWorkloadAPI;
+
+import "google/protobuf/struct.proto";
+
+service SpiffeWorkloadAPI {
+    // Fetch X.509 SVIDs for the calling workload, plus the trust
+    // bundle. Streams updates: every time the workload's SVID rotates
+    // or a new identity is registered, a new response arrives.
+    rpc FetchX509SVID(X509SVIDRequest) returns (stream X509SVIDResponse);
+
+    // Fetch the X.509 trust bundle for one or more trust domains
+    // (independent of any workload identity).
+    rpc FetchX509Bundles(X509BundlesRequest) returns (stream X509BundlesResponse);
+
+    // Fetch JWT-SVIDs for the calling workload (signed JWTs whose
+    // subject is the SPIFFE-ID, useful for L7 auth headers).
+    rpc FetchJWTSVID(JWTSVIDRequest) returns (JWTSVIDResponse);
+
+    // Validate a JWT-SVID against the trust bundle.
+    rpc ValidateJWTSVID(ValidateJWTSVIDRequest) returns (ValidateJWTSVIDResponse);
+
+    // Stream JWT bundles (rotation-aware).
+    rpc FetchJWTBundles(JWTBundlesRequest) returns (stream JWTBundlesResponse);
+}
+
+message X509SVIDRequest { }
+
+message X509SVIDResponse {
+    // The X.509 SVIDs the workload is entitled to, in priority order.
+    repeated X509SVID svids = 1;
+    // CRLs by trust domain.
+    map<string, bytes> crl = 2;
+    // Federated bundles: trust-domain → DER-encoded CA cert chain.
+    map<string, bytes> federated_bundles = 3;
+}
+
+message X509SVID {
+    // The SPIFFE-ID this SVID identifies.
+    string spiffe_id = 1;
+    // X.509 cert chain, ASN.1 DER, leaf first.
+    bytes x509_svid = 2;
+    // PKCS#8 DER-encoded private key.
+    bytes x509_svid_key = 3;
+    // The CA bundle (concatenated DER) used to validate this SVID's
+    // chain. Trust domain implied by the SPIFFE-ID's authority.
+    bytes bundle = 4;
+    // Hint for the workload (e.g. "primary"). Optional.
+    string hint = 5;
+}
+
+message X509BundlesRequest { }
+
+message X509BundlesResponse {
+    map<string, bytes> crl = 1;
+    // Trust domain → DER-encoded CA cert bundle.
+    map<string, bytes> bundles = 2;
+}
+
+message JWTSVIDRequest {
+    // Audiences the JWT will be presented to (aud claim values).
+    repeated string audience = 1;
+    // Optional SPIFFE-ID — when set, fetch a JWT for this specific
+    // identity (must be one of the workload's). Empty = default.
+    string spiffe_id = 2;
+}
+
+message JWTSVID {
+    string spiffe_id = 1;
+    string svid = 2;     // The JWT itself.
+    string hint = 3;
+}
+
+message JWTSVIDResponse {
+    repeated JWTSVID svids = 1;
+}
+
+message JWTBundlesRequest { }
+
+message JWTBundlesResponse {
+    // Trust domain → JWKS bytes.
+    map<string, bytes> bundles = 1;
+}
+
+message ValidateJWTSVIDRequest {
+    string audience = 1;
+    string svid = 2;
+}
+
+message ValidateJWTSVIDResponse {
+    string spiffe_id = 1;
+    google.protobuf.Struct claims = 2;
+}
