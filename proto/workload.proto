@@ -5,7 +5,12 @@
 
 syntax = "proto3";
 
-package SpiffeWorkloadAPI;
+// IMPORTANT: no package — the upstream SPIFFE Workload API .proto
+// declares no package, so the gRPC method path is
+// `/SpiffeWorkloadAPI/FetchX509SVID` not
+// `/<pkg>.SpiffeWorkloadAPI/FetchX509SVID`. Adding a `package`
+// declaration here makes tonic generate the wrong service path and
+// the agent answers "unknown service X.SpiffeWorkloadAPI".
 
 import "google/protobuf/struct.proto";
 

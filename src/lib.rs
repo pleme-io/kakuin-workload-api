@@ -37,9 +37,10 @@ use tonic::{Request, metadata::MetadataValue};
 
 pub mod proto {
     #![allow(clippy::all, clippy::pedantic)]
-    // tonic-build normalizes the proto package name (`SpiffeWorkloadAPI`)
-    // to snake_case for the generated file path.
-    tonic::include_proto!("spiffe_workload_api");
+    // No package in the .proto → tonic emits `_` (root) — the gRPC
+    // method path is `/SpiffeWorkloadAPI/FetchX509SVID` matching the
+    // upstream agent's served path.
+    tonic::include_proto!("_");
 }
 
 /// Default workload-API socket. Matches the path the upstream
